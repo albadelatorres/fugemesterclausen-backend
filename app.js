@@ -60,23 +60,36 @@ Daniel`;
 
   try {
     // 1) Auto-reply to the user
-    await resend.emails.send({
+    const { data: userData, error: userError } = await resend.emails.send({
       from,
-      to: email,
+      to: [email],
       subject: userSubject,
       text: userText,
       html: userHtml,
     });
 
+    if (userError) {
+      console.error("Resend user email error:", userError);
+      return res.status(500).json({ error: "Error sending user email", details: userError });
+    }
+
     // 2) Notification to you/owner (so you always get the lead even if the user's email bounces)
-    await resend.emails.send({
+    const { data: ownerData, error: ownerError } = await resend.emails.send({
       from,
-      to: ownerEmail,
+      to: [ownerEmail],
       subject: ownerSubject,
       text: ownerText,
     });
 
-    res.status(200).json({ message: "Emails sent successfully" });
+    if (ownerError) {
+      console.error("Resend owner email error:", ownerError);
+      return res.status(500).json({ error: "Error sending owner email", details: ownerError });
+    }
+
+    res.status(200).json({
+      message: "Email sent successfully",
+      resend: { user: userData, owner: ownerData },
+    });
   } catch (error) {
     console.error("Resend error:", error);
     res.status(500).json({ error: "Error sending email" });
